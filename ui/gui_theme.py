@@ -1,3 +1,7 @@
+from PyQt6.QtWidgets import QPushButton, QScrollArea, QWidget, QVBoxLayout
+from PyQt6.QtCore import Qt
+
+
 class Colors:
     BG_MAIN = "#1a1a2e"
     BG_CARD = "#16213e"
@@ -35,11 +39,11 @@ class Colors:
 
 class Styles:
     @staticmethod
-    def colored_btn(bg, size="13px", padding="8px 16px"):
+    def colored_btn(bg):
         return (
             f"background-color: {bg}; color: white; "
-            f"font-size: {size}; font-weight: bold; "
-            f"padding: {padding}; border: none; border-radius: 6px;"
+            f"font-size: 14px; font-weight: bold; "
+            f"padding: 10px 20px; border: none; border-radius: 6px;"
         )
 
     @staticmethod
@@ -65,3 +69,47 @@ class Styles:
             color = Colors.TEXT
         weight = "font-weight: bold; " if bold else ""
         return f"font-size: {size}px; {weight}color: {color};{' ' + extra if extra else ''}"
+
+
+class Widgets:
+    @staticmethod
+    def button(text, on_click=None, variant="default", width=None):
+        btn = QPushButton(text)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        if variant == "primary":
+            btn.setStyleSheet(Styles.colored_btn(Colors.ACCENT))
+        elif variant == "secondary":
+            btn.setStyleSheet(Styles.colored_btn(Colors.SECONDARY))
+        elif variant == "danger":
+            btn.setStyleSheet(Styles.colored_btn(Colors.DANGER))
+        elif variant == "export":
+            btn.setStyleSheet(Styles.colored_btn(Colors.SCORE_GOOD))
+        elif variant == "import":
+            btn.setStyleSheet(Styles.colored_btn(Colors.SCORE_PERFECT))
+        elif variant == "critical":
+            btn.setStyleSheet(Styles.colored_btn(Colors.SCORE_CRITICAL))
+        elif variant == "outline":
+            btn.setStyleSheet(
+                f"background-color: transparent; "
+                f"border: 1px solid {Colors.PURPLE}; color: {Colors.TEXT}; "
+                f"font-size: 14px; font-weight: bold; "
+                f"padding: 10px 20px; border-radius: 6px;"
+            )
+        else:
+            btn.setStyleSheet(Styles.colored_btn(Colors.ACCENT))
+
+        if width:
+            btn.setFixedWidth(width)
+        if on_click:
+            btn.clicked.connect(on_click)
+        return btn
+
+    @staticmethod
+    def scroll_area():
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        inner_layout = QVBoxLayout(container)
+        scroll.setWidget(container)
+        return scroll, inner_layout

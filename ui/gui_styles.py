@@ -13,26 +13,11 @@ QPushButton {{
     border: none;
     padding: 10px 20px;
     border-radius: 6px;
+    font-size: 14px;
     font-weight: bold;
 }}
 QPushButton:hover {{ background-color: {Colors.ACCENT_HOVER}; }}
 QPushButton:pressed {{ background-color: {Colors.ACCENT_PRESSED}; }}
-
-QPushButton#btnPrimary {{ background-color: {Colors.ACCENT}; font-size: 16px; }}
-QPushButton#btnPrimary:hover {{ background-color: {Colors.ACCENT_HOVER}; }}
-
-QPushButton#btnSecondary {{ background-color: {Colors.SECONDARY}; font-size: 14px; }}
-QPushButton#btnSecondary:hover {{ background-color: {Colors.SECONDARY_HOVER}; }}
-
-QPushButton#btnDanger {{ background-color: {Colors.DANGER}; }}
-QPushButton#btnDanger:hover {{ background-color: {Colors.DANGER_HOVER}; }}
-
-QPushButton#btnWhy {{
-    background-color: transparent;
-    border: 1px solid {Colors.PURPLE};
-    color: {Colors.TEXT};
-}}
-QPushButton#btnWhy:hover {{ background-color: {Colors.PURPLE}; }}
 
 QLabel#titleLabel {{
     font-size: 28px;

@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QProgressBar, QScrollArea, QFrame, QDialog, QTextEdit, QSpacerItem, QSizePolicy)
+    QProgressBar, QScrollArea, QFrame, QDialog, QTextEdit, QSpacerItem, QSizePolicy)
 from PyQt6.QtCore import Qt
-from ui.gui_theme import Colors, Styles
+from ui.gui_theme import Colors, Styles, Widgets
 from core.models import Recommendation
 from typing import List
 
@@ -33,18 +33,9 @@ class ResultsPage(QWidget):
         self._scroll.setWidget(self._scroll_widget)
         self._layout.addWidget(self._scroll)
         nav = QHBoxLayout()
-        btn_restart = QPushButton("Пройти знову")
-        btn_restart.setObjectName("btnPrimary")
-        btn_restart.setFixedWidth(200)
-        btn_restart.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_restart.clicked.connect(self._on_restart)
-        nav.addWidget(btn_restart)
+        nav.addWidget(Widgets.button("Пройти знову", on_click=self._on_restart, variant="primary", width=200))
         nav.addStretch()
-        btn_home = QPushButton("На головну")
-        btn_home.setFixedWidth(200)
-        btn_home.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_home.clicked.connect(self._on_home)
-        nav.addWidget(btn_home)
+        nav.addWidget(Widgets.button("На головну", on_click=self._on_home, variant="secondary", width=200))
         self._layout.addLayout(nav)
 
     def show_results(self, recommendations: List[Recommendation]):
@@ -88,11 +79,8 @@ class ResultsPage(QWidget):
             score_label = QLabel(f"Загальний бал: {rec.score:.1f}")
             score_label.setStyleSheet(Styles.text_style(12, Colors.TEXT_MUTED))
             card_layout.addWidget(score_label)
-            btn_why = QPushButton("Чому цей варіант?")
-            btn_why.setObjectName("btnWhy")
-            btn_why.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_why.clicked.connect(lambda checked, r=rec: self._show_explanation(r))
-            card_layout.addWidget(btn_why)
+            card_layout.addWidget(Widgets.button(
+                "Чому цей варіант?", on_click=lambda checked, r=rec: self._show_explanation(r), variant="outline"))
             self._scroll_layout.addWidget(card)
         self._scroll_layout.addSpacerItem(
             QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
@@ -130,9 +118,6 @@ class ResultsPage(QWidget):
         text.setPlainText(report)
         text.setStyleSheet(f"font-size: 13px; background-color: {Colors.BG_INPUT}; border-radius: 8px; padding: 10px;")
         layout.addWidget(text)
-        btn_close = QPushButton("Закрити")
-        btn_close.setFixedWidth(120)
-        btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_close.clicked.connect(dialog.close)
-        layout.addWidget(btn_close, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(Widgets.button("Закрити", on_click=dialog.close, width=120),
+                         alignment=Qt.AlignmentFlag.AlignCenter)
         dialog.exec()

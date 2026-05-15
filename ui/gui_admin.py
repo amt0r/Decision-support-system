@@ -1,24 +1,36 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QHeaderView,
-    QMessageBox, QTabWidget, QFormLayout, QDoubleSpinBox, QInputDialog, QDialog, QScrollArea, QFileDialog)
+    QMessageBox, QTabWidget, QFormLayout, QDoubleSpinBox, QDialog, QFileDialog)
 from PyQt6.QtCore import Qt
-from ui.gui_theme import Colors, Styles
+from ui.gui_theme import Colors, Styles, Widgets
 from core.database import Database
 
 
-def _create_score_buttons(layout, spin):
-    buttons = [
-        ("Ідеально", Colors.SCORE_PERFECT, 15),
-        ("Добре", Colors.SCORE_GOOD, 5),
-        ("Байдуже", Colors.SCORE_NEUTRAL, 0),
-        ("Погано", Colors.SCORE_BAD, -5),
-        ("Недоречно", Colors.SCORE_CRITICAL, -1000),
-    ]
-    for text, color, value in buttons:
+SCORE_BUTTONS = [
+    ("Ідеально", Colors.SCORE_PERFECT, 15),
+    ("Добре", Colors.SCORE_GOOD, 5),
+    ("Байдуже", Colors.SCORE_NEUTRAL, 0),
+    ("Погано", Colors.SCORE_BAD, -5),
+    ("Недоречно", Colors.SCORE_CRITICAL, -1000),
+]
+
+
+def _add_score_buttons(layout, spin):
+    for text, color, value in SCORE_BUTTONS:
         btn = QPushButton(text)
         btn.setStyleSheet(Styles.colored_btn(color))
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(lambda checked, s=spin, v=value: s.setValue(v))
         layout.addWidget(btn)
+
+
+def _create_spin():
+    spin = QDoubleSpinBox()
+    spin.setRange(-2000, 2000)
+    spin.setSingleStep(1)
+    spin.setDecimals(0)
+    spin.setFixedWidth(100)
+    return spin
 
 
 def _build_rules_for_answers(db, rules_layout, spinboxes, questions, get_current_value=None):
@@ -35,16 +47,11 @@ def _build_rules_for_answers(db, rules_layout, spinboxes, questions, get_current
             row = QHBoxLayout()
             row.addWidget(QLabel(f"  • {a.label}"))
 
-            spin = QDoubleSpinBox()
-            spin.setRange(-2000, 2000)
-            spin.setSingleStep(1)
-            spin.setDecimals(0)
-            spin.setFixedWidth(100)
-
+            spin = _create_spin()
             if get_current_value:
                 spin.setValue(get_current_value(q.id, a.value))
 
-            _create_score_buttons(row, spin)
+            _add_score_buttons(row, spin)
             row.addWidget(spin)
 
             rules_layout.addLayout(row)
@@ -60,20 +67,29 @@ def _build_rules_for_options(options, rules_layout, rules_widgets, answer_val, g
         row_layout = QHBoxLayout()
         row_layout.addWidget(QLabel(f"  -> {opt.text[:30]}..."))
 
-        spin = QDoubleSpinBox()
-        spin.setRange(-2000, 2000)
-        spin.setSingleStep(1)
-        spin.setDecimals(0)
-        spin.setFixedWidth(100)
-
+        spin = _create_spin()
         if get_current_value:
             spin.setValue(get_current_value(opt.id))
 
-        _create_score_buttons(row_layout, spin)
+        _add_score_buttons(row_layout, spin)
         row_layout.addWidget(spin)
 
         rules_layout.addLayout(row_layout)
         rules_widgets.append((answer_val, opt.id, spin))
+
+
+def _collect_rules_from_spinboxes(spinboxes):
+    return [(q_id, a_val, spin.value()) for q_id, a_val, spin in spinboxes if spin.value() != 0]
+
+
+def _collect_question_rules(rules_widgets):
+    return [(val, opt_id, spin.value()) for val, opt_id, spin in rules_widgets if spin.value() != 0]
+
+
+def _collect_answers(answers_list):
+    result = [(val, inp.text().strip()) for val, inp in answers_list if inp.text().strip()]
+    result.append(("dk", "Не знаю"))
+    return result
 
 
 class AdminLoginDialog(QDialog):
@@ -93,9 +109,7 @@ class AdminLoginDialog(QDialog):
         layout.addWidget(self.user_input)
         layout.addWidget(QLabel("Пароль:"))
         layout.addWidget(self.pass_input)
-        btn_login = QPushButton("Увійти")
-        btn_login.clicked.connect(self._login)
-        layout.addWidget(btn_login)
+        layout.addWidget(Widgets.button("Увійти", on_click=self._login))
 
     def _login(self):
         user = self.user_input.text().strip()
@@ -116,7 +130,7 @@ class AddOptionDialog(QDialog):
         super().__init__(parent)
         self._db = db
         self.setWindowTitle("Додати нове рішення (Обладнання)")
-        self.setMinimumSize(1000, 500)
+        self.setMinimumSize(1500, 800)
 
         self.text_input = QLineEdit()
         self.desc_input = QLineEdit()
@@ -128,33 +142,21 @@ class AddOptionDialog(QDialog):
         layout.addLayout(form)
 
         layout.addWidget(QLabel("Бали за кожну відповідь (+ або -):"))
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll_w = QWidget()
-        self.rules_layout = QVBoxLayout(scroll_w)
+        scroll, self.rules_layout = Widgets.scroll_area()
 
         self.spinboxes = []
         questions = self._db.get_all_questions()
         _build_rules_for_answers(self._db, self.rules_layout, self.spinboxes, questions)
 
-        scroll.setWidget(scroll_w)
         layout.addWidget(scroll)
-
-        btn_save = QPushButton("Зберегти")
-        btn_save.clicked.connect(self.accept)
-        layout.addWidget(btn_save)
+        layout.addWidget(Widgets.button("Зберегти", on_click=self.accept))
 
     def get_data(self):
-        rules = []
-        for q_id, a_val, spin in self.spinboxes:
-            val = spin.value()
-            if val != 0:
-                rules.append((q_id, a_val, val))
         return (
             self.text_input.text().strip(),
             self.desc_input.text().strip(),
             0.0,
-            rules
+            _collect_rules_from_spinboxes(self.spinboxes)
         )
 
 
@@ -164,7 +166,7 @@ class EditOptionRulesDialog(QDialog):
         self._db = db
         self.option_id = option_id
         self.setWindowTitle(f"Редагувати бали: {option_text}")
-        self.setMinimumSize(1000, 500)
+        self.setMinimumSize(1500, 800)
 
         layout = QVBoxLayout(self)
         lbl_title = QLabel(f"Редагування балів для: <b>{option_text}</b>")
@@ -172,10 +174,7 @@ class EditOptionRulesDialog(QDialog):
         layout.addWidget(lbl_title)
         layout.addWidget(QLabel("Бали за кожну відповідь (+ або -):"))
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll_w = QWidget()
-        self.rules_layout = QVBoxLayout(scroll_w)
+        scroll, self.rules_layout = Widgets.scroll_area()
 
         self.spinboxes = []
         questions = self._db.get_all_questions()
@@ -191,20 +190,11 @@ class EditOptionRulesDialog(QDialog):
 
         _build_rules_for_answers(self._db, self.rules_layout, self.spinboxes, questions, get_current_value=get_val)
 
-        scroll.setWidget(scroll_w)
         layout.addWidget(scroll)
-
-        btn_save = QPushButton("Зберегти")
-        btn_save.clicked.connect(self.accept)
-        layout.addWidget(btn_save)
+        layout.addWidget(Widgets.button("Зберегти", on_click=self.accept))
 
     def get_data(self):
-        rules = []
-        for q_id, a_val, spin in self.spinboxes:
-            val = spin.value()
-            if val != 0:
-                rules.append((q_id, a_val, val))
-        return rules
+        return _collect_rules_from_spinboxes(self.spinboxes)
 
 
 class AddQuestionDialog(QDialog):
@@ -228,21 +218,11 @@ class AddQuestionDialog(QDialog):
 
         self.answers_layout = QVBoxLayout()
         layout.addLayout(self.answers_layout)
+        layout.addWidget(Widgets.button("Додати варіант відповіді", on_click=self._add_answer_row))
 
-        btn_add_ans = QPushButton("Додати варіант відповіді")
-        btn_add_ans.clicked.connect(self._add_answer_row)
-        layout.addWidget(btn_add_ans)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll_w = QWidget()
-        self.rules_layout = QVBoxLayout(scroll_w)
-        scroll.setWidget(scroll_w)
+        scroll, self.rules_layout = Widgets.scroll_area()
         layout.addWidget(scroll)
-
-        btn_save = QPushButton("Зберегти")
-        btn_save.clicked.connect(self.accept)
-        layout.addWidget(btn_save)
+        layout.addWidget(Widgets.button("Зберегти", on_click=self.accept))
 
         self.options = self._db.get_all_options()
         self._val_counter = 97
@@ -262,20 +242,11 @@ class AddQuestionDialog(QDialog):
         _build_rules_for_options(self.options, self.rules_layout, self.rules_widgets, val)
 
     def get_data(self):
-        ans_data = [(val, inp.text().strip()) for val, inp in self.answers if inp.text().strip()]
-        ans_data.append(("dk", "Не знаю"))
-
-        rules_data = []
-        for val, opt_id, spin in self.rules_widgets:
-            s_val = spin.value()
-            if s_val != 0:
-                rules_data.append((val, opt_id, s_val))
-
         return (
             self.text_input.text().strip(),
             self.cat_input.text().strip(),
-            ans_data,
-            rules_data
+            _collect_answers(self.answers),
+            _collect_question_rules(self.rules_widgets)
         )
 
 
@@ -303,21 +274,11 @@ class EditQuestionDialog(QDialog):
 
         self.answers_layout = QVBoxLayout()
         layout.addLayout(self.answers_layout)
+        layout.addWidget(Widgets.button("Додати варіант відповіді", on_click=self._add_answer_row_empty))
 
-        btn_add_ans = QPushButton("Додати варіант відповіді")
-        btn_add_ans.clicked.connect(self._add_answer_row_empty)
-        layout.addWidget(btn_add_ans)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll_w = QWidget()
-        self.rules_layout = QVBoxLayout(scroll_w)
-        scroll.setWidget(scroll_w)
+        scroll, self.rules_layout = Widgets.scroll_area()
         layout.addWidget(scroll)
-
-        btn_save = QPushButton("Зберегти")
-        btn_save.clicked.connect(self.accept)
-        layout.addWidget(btn_save)
+        layout.addWidget(Widgets.button("Зберегти", on_click=self.accept))
 
         self.options = self._db.get_all_options()
         self._val_counter = 97
@@ -358,20 +319,11 @@ class EditQuestionDialog(QDialog):
         _build_rules_for_options(self.options, self.rules_layout, self.rules_widgets, val, get_current_value=get_val)
 
     def get_data(self):
-        ans_data = [(val, inp.text().strip()) for val, inp in self.answers if inp.text().strip()]
-        ans_data.append(("dk", "Не знаю"))
-
-        rules_data = []
-        for val, opt_id, spin in self.rules_widgets:
-            s_val = spin.value()
-            if s_val != 0:
-                rules_data.append((val, opt_id, s_val))
-
         return (
             self.text_input.text().strip(),
             self.cat_input.text().strip(),
-            ans_data,
-            rules_data
+            _collect_answers(self.answers),
+            _collect_question_rules(self.rules_widgets)
         )
 
 
@@ -389,9 +341,7 @@ class AdminPanelPage(QWidget):
         title.setObjectName("titleLabel")
         header.addWidget(title)
         header.addStretch()
-        btn_logout = QPushButton("Вийти")
-        btn_logout.clicked.connect(self._on_logout)
-        header.addWidget(btn_logout)
+        header.addWidget(Widgets.button("Вийти", on_click=self._on_logout, variant="danger"))
         self._layout.addLayout(header)
 
         self._tabs = QTabWidget()
@@ -418,15 +368,9 @@ class AdminPanelPage(QWidget):
         layout.addWidget(self._q_table)
 
         btn_layout = QHBoxLayout()
-        btn_add = QPushButton("Додати питання")
-        btn_add.clicked.connect(self._add_question)
-        btn_edit = QPushButton("Редагувати питання")
-        btn_edit.clicked.connect(self._edit_question)
-        btn_del = QPushButton("Видалити питання")
-        btn_del.clicked.connect(self._delete_question)
-        btn_layout.addWidget(btn_add)
-        btn_layout.addWidget(btn_edit)
-        btn_layout.addWidget(btn_del)
+        btn_layout.addWidget(Widgets.button("Додати питання", on_click=self._add_question))
+        btn_layout.addWidget(Widgets.button("Редагувати питання", on_click=self._edit_question, variant="secondary"))
+        btn_layout.addWidget(Widgets.button("Видалити питання", on_click=self._delete_question, variant="danger"))
         layout.addLayout(btn_layout)
 
     def _build_options_tab(self):
@@ -439,15 +383,9 @@ class AdminPanelPage(QWidget):
         layout.addWidget(self._opt_table)
 
         btn_layout = QHBoxLayout()
-        btn_add = QPushButton("Додати рішення")
-        btn_add.clicked.connect(self._add_option)
-        btn_edit = QPushButton("Редагувати бали")
-        btn_edit.clicked.connect(self._edit_option_rules)
-        btn_del = QPushButton("Видалити рішення")
-        btn_del.clicked.connect(self._delete_option)
-        btn_layout.addWidget(btn_add)
-        btn_layout.addWidget(btn_edit)
-        btn_layout.addWidget(btn_del)
+        btn_layout.addWidget(Widgets.button("Додати рішення", on_click=self._add_option))
+        btn_layout.addWidget(Widgets.button("Редагувати бали", on_click=self._edit_option_rules, variant="secondary"))
+        btn_layout.addWidget(Widgets.button("Видалити рішення", on_click=self._delete_option, variant="danger"))
         layout.addLayout(btn_layout)
 
     def load_data(self):
@@ -546,24 +484,10 @@ class AdminPanelPage(QWidget):
         lbl_info = QLabel("<b>Міграція даних</b><br>Тут ви можете зберегти всі налаштування запитань та обладнання у файл, або відновити їх. Також можна повністю очистити базу.")
         lbl_info.setStyleSheet("font-size: 14px; margin-bottom: 20px;")
         layout.addWidget(lbl_info)
-
-        btn_export = QPushButton("Експортувати в JSON (Зберегти)")
-        btn_export.setStyleSheet(Styles.colored_btn(Colors.SCORE_GOOD))
-        btn_export.clicked.connect(self._export_data)
-        layout.addWidget(btn_export)
-
-        btn_import = QPushButton("Імпортувати з JSON (Завантажити)")
-        btn_import.setStyleSheet(Styles.colored_btn(Colors.SCORE_PERFECT))
-        btn_import.clicked.connect(self._import_data)
-        layout.addWidget(btn_import)
-
+        layout.addWidget(Widgets.button("Експортувати в JSON (Зберегти)", on_click=self._export_data, variant="export"))
+        layout.addWidget(Widgets.button("Імпортувати з JSON (Завантажити)", on_click=self._import_data, variant="import"))
         layout.addSpacing(40)
-
-        btn_clear = QPushButton("Очистити базу даних (Скинути все)")
-        btn_clear.setStyleSheet(Styles.colored_btn(Colors.SCORE_CRITICAL))
-        btn_clear.clicked.connect(self._clear_database)
-        layout.addWidget(btn_clear)
-
+        layout.addWidget(Widgets.button("Очистити базу даних (Скинути все)", on_click=self._clear_database, variant="critical"))
         layout.addStretch()
 
     def _export_data(self):
@@ -593,25 +517,7 @@ class AdminPanelPage(QWidget):
                     with open(file_path, 'r', encoding='utf-8') as f:
                         data = json.load(f)
 
-                    if not isinstance(data, dict):
-                        raise ValueError("Кореневий елемент має бути словником.")
-                    if "questions" not in data or "options" not in data or "rules" not in data:
-                        raise ValueError("Відсутні обов'язкові ключі: 'questions', 'options', 'rules'.")
-
-                    for q in data["questions"]:
-                        if not all(k in q for k in ("id", "text", "category", "answers")):
-                            raise ValueError("Невірний формат питання.")
-                        for a in q["answers"]:
-                            if not all(k in a for k in ("value", "label")):
-                                raise ValueError("Невірний формат варіанту відповіді.")
-
-                    for o in data["options"]:
-                        if not all(k in o for k in ("id", "text", "description", "base_score")):
-                            raise ValueError("Невірний формат рішення (обладнання).")
-
-                    for r in data["rules"]:
-                        if not all(k in r for k in ("question_id", "answer_value", "option_id", "score_adjustment")):
-                            raise ValueError("Невірний формат правила.")
+                    self._db.validate_import_data(data)
 
                     self._db.import_data(data)
                     self.load_data()

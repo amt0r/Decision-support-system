@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QRadioButton, QButtonGroup, QProgressBar, QMessageBox, QSpacerItem, QSizePolicy, QFrame)
+    QRadioButton, QButtonGroup, QProgressBar, QMessageBox, QSpacerItem, QSizePolicy, QFrame)
 from PyQt6.QtCore import Qt
-from ui.gui_theme import Colors
+from ui.gui_theme import Colors, Widgets
 
 class QuestionnairePage(QWidget):
     def __init__(self, db, on_finish, on_back):
@@ -46,17 +46,10 @@ class QuestionnairePage(QWidget):
         self._layout.addWidget(self._answers_widget)
         self._layout.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         nav = QHBoxLayout()
-        self._btn_back = QPushButton("← Назад")
-        self._btn_back.setFixedWidth(150)
-        self._btn_back.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._btn_back.clicked.connect(self._go_back)
+        self._btn_back = Widgets.button("← Назад", on_click=self._go_back, variant="secondary", width=150)
         nav.addWidget(self._btn_back)
         nav.addStretch()
-        self._btn_next = QPushButton("Далі →")
-        self._btn_next.setObjectName("btnPrimary")
-        self._btn_next.setFixedWidth(150)
-        self._btn_next.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._btn_next.clicked.connect(self._go_next)
+        self._btn_next = Widgets.button("Далі →", on_click=self._go_next, variant="primary", width=150)
         nav.addWidget(self._btn_next)
         self._layout.addLayout(nav)
 

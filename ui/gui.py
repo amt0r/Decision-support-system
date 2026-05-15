@@ -1,7 +1,8 @@
-from PyQt6.QtWidgets import QMainWindow, QStackedWidget
+from PyQt6.QtWidgets import QMainWindow, QStackedWidget, QMessageBox
 from PyQt6.QtGui import QIcon
 from core.database import Database
 from core.engine import InferenceEngine
+from core.config import TOP_RESULTS_COUNT
 from ui.gui_styles import MAIN_STYLE
 from ui.gui_welcome import WelcomePage
 from ui.gui_questionnaire import QuestionnairePage
@@ -17,6 +18,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(900, 600)
         self.setWindowIcon(QIcon("icon.png"))
         self.setStyleSheet(MAIN_STYLE)
+        self.showMaximized()
         
         self._stacked = QStackedWidget()
         self.setCentralWidget(self._stacked)
@@ -40,13 +42,11 @@ class MainWindow(QMainWindow):
         questions = self._db.get_all_questions()
         options = self._db.get_all_options()
         if not questions:
-            from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "Неможливо розпочати",
                 "У базі даних немає жодного запитання.\n"
                 "Додайте принаймні одне запитання через панель адміністратора.")
             return
         if not options:
-            from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "Неможливо розпочати",
                 "У базі даних немає жодного рішення (обладнання).\n"
                 "Додайте принаймні одне рішення через панель адміністратора.")
@@ -55,9 +55,8 @@ class MainWindow(QMainWindow):
         self._stacked.setCurrentWidget(self._questionnaire)
 
     def _show_results(self, answers):
-        recommendations = self._engine.get_top_recommendations(answers, top_n=10)
+        recommendations = self._engine.get_top_recommendations(answers, top_n=TOP_RESULTS_COUNT)
         if not recommendations:
-            from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "Немає результатів",
                 "Система не змогла підібрати жодного рішення.\n"
                 "Можливо, у базі немає обладнання або правил.")

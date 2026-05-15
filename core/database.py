@@ -3,6 +3,7 @@ import hashlib
 import json
 from typing import List, Optional, Tuple
 from core.models import Question, QuestionAnswer, Option, Rule, Admin
+from core.config import REQUIRED_IMPORT_KEYS, REQUIRED_QUESTION_KEYS, REQUIRED_ANSWER_KEYS, REQUIRED_OPTION_KEYS, REQUIRED_RULE_KEYS
 
 DB_PATH = "dss_energy.db"
 
@@ -25,6 +26,9 @@ class Database:
         if self._connection is None:
             self.connect()
         return self._connection
+
+    def _execute(self, sql, params=()):
+        return self.get_connection().execute(sql, params)
 
     def initialize(self):
         conn = self.get_connection()
@@ -69,46 +73,37 @@ class Database:
         return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
     def get_all_questions(self) -> List[Question]:
-        cursor = self.get_connection().cursor()
-        cursor.execute("SELECT id, text, category FROM questions ORDER BY id")
-        return [Question(id=r[0], text=r[1], category=r[2]) for r in cursor.fetchall()]
+        rows = self._execute("SELECT id, text, category FROM questions ORDER BY id").fetchall()
+        return [Question(id=r[0], text=r[1], category=r[2]) for r in rows]
 
     def get_question_answers(self, question_id: int) -> List[QuestionAnswer]:
-        cursor = self.get_connection().cursor()
-        cursor.execute("SELECT id, question_id, value, label FROM question_answers WHERE question_id = ? ORDER BY id", (question_id,))
-        return [QuestionAnswer(id=r[0], question_id=r[1], value=r[2], label=r[3]) for r in cursor.fetchall()]
+        rows = self._execute("SELECT id, question_id, value, label FROM question_answers WHERE question_id = ? ORDER BY id", (question_id,)).fetchall()
+        return [QuestionAnswer(id=r[0], question_id=r[1], value=r[2], label=r[3]) for r in rows]
 
     def get_all_options(self) -> List[Option]:
-        cursor = self.get_connection().cursor()
-        cursor.execute("SELECT id, text, description, base_score FROM options ORDER BY id")
-        return [Option(id=r[0], text=r[1], description=r[2], base_score=r[3]) for r in cursor.fetchall()]
+        rows = self._execute("SELECT id, text, description, base_score FROM options ORDER BY id").fetchall()
+        return [Option(id=r[0], text=r[1], description=r[2], base_score=r[3]) for r in rows]
 
     def get_option_by_id(self, option_id: int) -> Optional[Option]:
-        cursor = self.get_connection().cursor()
-        cursor.execute("SELECT id, text, description, base_score FROM options WHERE id = ?", (option_id,))
-        r = cursor.fetchone()
+        r = self._execute("SELECT id, text, description, base_score FROM options WHERE id = ?", (option_id,)).fetchone()
         if r:
             return Option(id=r[0], text=r[1], description=r[2], base_score=r[3])
         return None
 
     def get_rules_for_answer(self, question_id: int, answer_value: str) -> List[Rule]:
-        cursor = self.get_connection().cursor()
-        cursor.execute(
+        rows = self._execute(
             "SELECT id, question_id, answer_value, option_id, score_adjustment FROM rules WHERE question_id = ? AND answer_value = ?",
             (question_id, answer_value)
-        )
-        return [Rule(id=r[0], question_id=r[1], answer_value=r[2], option_id=r[3], score_adjustment=r[4]) for r in cursor.fetchall()]
+        ).fetchall()
+        return [Rule(id=r[0], question_id=r[1], answer_value=r[2], option_id=r[3], score_adjustment=r[4]) for r in rows]
 
     def get_all_rules(self) -> List[Rule]:
-        cursor = self.get_connection().cursor()
-        cursor.execute("SELECT id, question_id, answer_value, option_id, score_adjustment FROM rules ORDER BY id")
-        return [Rule(id=r[0], question_id=r[1], answer_value=r[2], option_id=r[3], score_adjustment=r[4]) for r in cursor.fetchall()]
+        rows = self._execute("SELECT id, question_id, answer_value, option_id, score_adjustment FROM rules ORDER BY id").fetchall()
+        return [Rule(id=r[0], question_id=r[1], answer_value=r[2], option_id=r[3], score_adjustment=r[4]) for r in rows]
 
     def authenticate_admin(self, username: str, password: str) -> Optional[Admin]:
-        cursor = self.get_connection().cursor()
         password_hash = self._hash_password(password)
-        cursor.execute("SELECT id, username, password_hash FROM admins WHERE username = ? AND password_hash = ?", (username, password_hash))
-        r = cursor.fetchone()
+        r = self._execute("SELECT id, username, password_hash FROM admins WHERE username = ? AND password_hash = ?", (username, password_hash)).fetchone()
         if r:
             return Admin(id=r[0], username=r[1], password_hash=r[2])
         return None
@@ -222,9 +217,7 @@ class Database:
         conn.commit()
 
     def get_question_by_id(self, question_id: int) -> Optional[Question]:
-        cursor = self.get_connection().cursor()
-        cursor.execute("SELECT id, text, category FROM questions WHERE id = ?", (question_id,))
-        r = cursor.fetchone()
+        r = self._execute("SELECT id, text, category FROM questions WHERE id = ?", (question_id,)).fetchone()
         if r:
             return Question(id=r[0], text=r[1], category=r[2])
         return None
@@ -274,6 +267,26 @@ class Database:
             
         return data
 
+    @staticmethod
+    def validate_import_data(data: dict):
+        if not isinstance(data, dict):
+            raise ValueError("Кореневий елемент має бути словником.")
+        for key in REQUIRED_IMPORT_KEYS:
+            if key not in data:
+                raise ValueError(f"Відсутній обов'язковий ключ: '{key}'.")
+        for q in data["questions"]:
+            if not all(k in q for k in REQUIRED_QUESTION_KEYS):
+                raise ValueError("Невірний формат питання.")
+            for a in q["answers"]:
+                if not all(k in a for k in REQUIRED_ANSWER_KEYS):
+                    raise ValueError("Невірний формат варіанту відповіді.")
+        for o in data["options"]:
+            if not all(k in o for k in REQUIRED_OPTION_KEYS):
+                raise ValueError("Невірний формат рішення (обладнання).")
+        for r in data["rules"]:
+            if not all(k in r for k in REQUIRED_RULE_KEYS):
+                raise ValueError("Невірний формат правила.")
+
     def import_data(self, data: dict):
         self.clear_all_data()
         conn = self.get_connection()
@@ -294,11 +307,8 @@ class Database:
         conn.commit()
 
     def populate_initial_data(self):
-        cursor = self.get_connection().cursor()
-        cursor.execute("SELECT COUNT(*) FROM questions")
-        q_count = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM options")
-        o_count = cursor.fetchone()[0]
+        q_count = self._execute("SELECT COUNT(*) FROM questions").fetchone()[0]
+        o_count = self._execute("SELECT COUNT(*) FROM options").fetchone()[0]
         if q_count > 0 or o_count > 0:
             return
 

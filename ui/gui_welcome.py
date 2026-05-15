@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
-from ui.gui_theme import Colors, Styles
+from ui.gui_theme import Styles, Widgets
 
 class WelcomePage(QWidget):
     def __init__(self, on_start, on_admin):
@@ -19,17 +19,10 @@ class WelcomePage(QWidget):
         layout.addWidget(subtitle)
         desc = QLabel("Дайте відповіді на запитання, і система\nпідбере оптимальне рішення для вашого випадку.")
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc.setStyleSheet(Styles.text_style(14, Colors.TEXT_DIM))
+        desc.setStyleSheet(Styles.text_style(14))
         layout.addWidget(desc)
-        btn_start = QPushButton("Почати консультацію")
-        btn_start.setObjectName("btnPrimary")
-        btn_start.setFixedWidth(300)
-        btn_start.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_start.clicked.connect(on_start)
+        btn_start = Widgets.button("Почати консультацію", on_click=on_start, variant="primary", width=300)
         layout.addWidget(btn_start, alignment=Qt.AlignmentFlag.AlignCenter)
-        btn_admin = QPushButton("Панель адміністратора")
-        btn_admin.setFixedWidth(300)
-        btn_admin.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_admin.clicked.connect(on_admin)
+        btn_admin = Widgets.button("Панель адміністратора", on_click=on_admin, variant="secondary", width=300)
         layout.addWidget(btn_admin, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addSpacerItem(QSpacerItem(20, 60, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
