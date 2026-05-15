@@ -1,8 +1,8 @@
 import sys
 from PyQt6.QtWidgets import QApplication
-from database import Database
-from engine import InferenceEngine
-from gui import MainWindow
+from core.database import Database
+from core.engine import InferenceEngine
+from ui.gui import MainWindow
 
 def main():
     db = Database()

@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QRadioButton, QButtonGroup, QProgressBar, QMessageBox, QSpacerItem, QSizePolicy, QFrame)
 from PyQt6.QtCore import Qt
+from ui.gui_theme import Colors
 
 class QuestionnairePage(QWidget):
     def __init__(self, db, on_finish, on_back):
@@ -24,7 +25,7 @@ class QuestionnairePage(QWidget):
         top.addWidget(self._progress_label)
         top.addStretch()
         self._category_label = QLabel()
-        self._category_label.setStyleSheet("color: #e94560; font-weight: bold;")
+        self._category_label.setStyleSheet(f"color: {Colors.ACCENT}; font-weight: bold;")
         top.addWidget(self._category_label)
         self._layout.addLayout(top)
         self._progress_bar = QProgressBar()
@@ -37,7 +38,7 @@ class QuestionnairePage(QWidget):
         self._layout.addWidget(self._question_label)
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("color: #333;")
+        line.setStyleSheet(f"color: {Colors.BORDER};")
         self._layout.addWidget(line)
         self._answers_widget = QWidget()
         self._answers_layout = QVBoxLayout(self._answers_widget)

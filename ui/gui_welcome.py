@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy
 from PyQt6.QtCore import Qt
+from ui.gui_theme import Colors, Styles
 
 class WelcomePage(QWidget):
     def __init__(self, on_start, on_admin):
@@ -18,7 +19,7 @@ class WelcomePage(QWidget):
         layout.addWidget(subtitle)
         desc = QLabel("Дайте відповіді на запитання, і система\nпідбере оптимальне рішення для вашого випадку.")
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc.setStyleSheet("font-size: 14px; color: #a0a0b0;")
+        desc.setStyleSheet(Styles.text_style(14, Colors.TEXT_DIM))
         layout.addWidget(desc)
         btn_start = QPushButton("Почати консультацію")
         btn_start.setObjectName("btnPrimary")

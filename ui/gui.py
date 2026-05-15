@@ -1,12 +1,12 @@
 from PyQt6.QtWidgets import QMainWindow, QStackedWidget
 from PyQt6.QtGui import QIcon
-from database import Database
-from engine import InferenceEngine
-from gui_styles import MAIN_STYLE
-from gui_welcome import WelcomePage
-from gui_questionnaire import QuestionnairePage
-from gui_results import ResultsPage
-from gui_admin import AdminPanelPage, AdminLoginDialog
+from core.database import Database
+from core.engine import InferenceEngine
+from ui.gui_styles import MAIN_STYLE
+from ui.gui_welcome import WelcomePage
+from ui.gui_questionnaire import QuestionnairePage
+from ui.gui_results import ResultsPage
+from ui.gui_admin import AdminPanelPage, AdminLoginDialog
 
 class MainWindow(QMainWindow):
     def __init__(self, db: Database, engine: InferenceEngine):

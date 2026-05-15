@@ -1,6 +1,6 @@
 from typing import Dict, List
-from models import Question, QuestionAnswer, Option, Rule, Recommendation
-from database import Database
+from core.models import Question, QuestionAnswer, Option, Rule, Recommendation
+from core.database import Database
 
 class InferenceEngine:
     def __init__(self, db: Database):
@@ -87,4 +87,5 @@ class InferenceEngine:
 
     def get_top_recommendations(self, answers: Dict[int, str], top_n: int = 3) -> List[Recommendation]:
         all_recs = self.evaluate(answers)
-        return all_recs[:top_n]
+        positive = [r for r in all_recs if r.score > 0]
+        return positive[:top_n]

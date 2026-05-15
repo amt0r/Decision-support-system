@@ -1,8 +1,8 @@
 import unittest
 import os
 import json
-from database import Database
-from engine import InferenceEngine
+from core.database import Database
+from core.engine import InferenceEngine
 
 class TestDatabaseInitialization(unittest.TestCase):
     def setUp(self):

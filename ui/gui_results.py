@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QProgressBar, QScrollArea, QFrame, QDialog, QTextEdit, QSpacerItem, QSizePolicy)
 from PyQt6.QtCore import Qt
-from models import Recommendation
+from ui.gui_theme import Colors, Styles
+from core.models import Recommendation
 from typing import List
 
 class ResultsPage(QWidget):
@@ -54,36 +55,28 @@ class ResultsPage(QWidget):
             if w:
                 w.deleteLater()
         medals = ["🥇", "🥈", "🥉"]
-        colors = ["#e94560", "#533483", "#0f3460"]
         for i, rec in enumerate(recommendations[:10]):
             card = QFrame()
-            color = colors[i] if i < 3 else "#444444"
-            card.setStyleSheet(f"""
-                QFrame {{
-                    background-color: #16213e;
-                    border: 2px solid {color};
-                    border-radius: 12px;
-                    padding: 15px;
-                }}
-            """)
+            color = Colors.MEDAL_COLORS[i] if i < 3 else Colors.BORDER_LIGHT
+            card.setStyleSheet(Styles.result_card(color))
             card_layout = QVBoxLayout(card)
             card_layout.setSpacing(10)
             header = QHBoxLayout()
             medal_str = f"{medals[i]} #{i+1}" if i < 3 else f"#{i+1}"
             medal = QLabel(medal_str)
-            medal.setStyleSheet(f"font-size: 22px; font-weight: bold; color: {color};")
+            medal.setStyleSheet(Styles.text_style(22, color, bold=True))
             header.addWidget(medal)
             header.addStretch()
             pct = QLabel(f"{rec.percentage:.1f}%")
-            pct.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {color};")
+            pct.setStyleSheet(Styles.text_style(20, color, bold=True))
             header.addWidget(pct)
             card_layout.addLayout(header)
             name = QLabel(rec.option.text)
-            name.setStyleSheet("font-size: 18px; font-weight: bold; color: #ffffff;")
+            name.setStyleSheet(Styles.text_style(18, Colors.TEXT_WHITE, bold=True))
             name.setWordWrap(True)
             card_layout.addWidget(name)
             desc = QLabel(rec.option.description)
-            desc.setStyleSheet("font-size: 13px; color: #a0a0b0;")
+            desc.setStyleSheet(Styles.text_style(13, Colors.TEXT_DIM))
             desc.setWordWrap(True)
             card_layout.addWidget(desc)
             bar = QProgressBar()
@@ -93,12 +86,11 @@ class ResultsPage(QWidget):
             bar.setTextVisible(False)
             card_layout.addWidget(bar)
             score_label = QLabel(f"Загальний бал: {rec.score:.1f}")
-            score_label.setStyleSheet("font-size: 12px; color: #888;")
+            score_label.setStyleSheet(Styles.text_style(12, Colors.TEXT_MUTED))
             card_layout.addWidget(score_label)
             btn_why = QPushButton("Чому цей варіант?")
             btn_why.setObjectName("btnWhy")
             btn_why.setCursor(Qt.CursorShape.PointingHandCursor)
-            idx = i
             btn_why.clicked.connect(lambda checked, r=rec: self._show_explanation(r))
             card_layout.addWidget(btn_why)
             self._scroll_layout.addWidget(card)
@@ -111,24 +103,24 @@ class ResultsPage(QWidget):
         dialog.setMinimumSize(600, 450)
         layout = QVBoxLayout(dialog)
         header = QLabel(f"Пояснення для: {rec.option.text}")
-        header.setStyleSheet("font-size: 16px; font-weight: bold; color: #e94560; padding: 10px;")
+        header.setStyleSheet(Styles.text_style(16, Colors.ACCENT, bold=True, extra="padding: 10px"))
         header.setWordWrap(True)
         layout.addWidget(header)
         info = QLabel(f"Загальний бал: {rec.score:.1f} | Відповідність: {rec.percentage:.1f}%")
-        info.setStyleSheet("font-size: 14px; color: #a0a0b0; padding: 5px;")
+        info.setStyleSheet(Styles.text_style(14, Colors.TEXT_DIM, extra="padding: 5px"))
         layout.addWidget(info)
         text = QTextEdit()
         text.setReadOnly(True)
         report = "Цей варіант підібрано, тому що (переваги):\n"
         pos_exps = [e for e in rec.explanations if "✅" in e]
         neg_exps = [e for e in rec.explanations if "❌" in e]
-        
+
         if pos_exps:
             for exp in pos_exps:
                 report += f"  {exp}\n"
         else:
             report += "  (Немає явних переваг згідно з вашими відповідями)\n"
-            
+
         report += "\nНедоліки або невідповідності (що зменшило бал):\n"
         if neg_exps:
             for exp in neg_exps:
@@ -136,7 +128,7 @@ class ResultsPage(QWidget):
         else:
             report += "  (Жодних суттєвих недоліків не виявлено)\n"
         text.setPlainText(report)
-        text.setStyleSheet("font-size: 13px; background-color: #0f1020; border-radius: 8px; padding: 10px;")
+        text.setStyleSheet(f"font-size: 13px; background-color: {Colors.BG_INPUT}; border-radius: 8px; padding: 10px;")
         layout.addWidget(text)
         btn_close = QPushButton("Закрити")
         btn_close.setFixedWidth(120)

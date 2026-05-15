@@ -2,7 +2,7 @@ import sqlite3
 import hashlib
 import json
 from typing import List, Optional, Tuple
-from models import Question, QuestionAnswer, Option, Rule, Admin
+from core.models import Question, QuestionAnswer, Option, Rule, Admin
 
 DB_PATH = "dss_energy.db"
 
