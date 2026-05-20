@@ -1,5 +1,5 @@
 from typing import Dict, List
-from core.models import Question, QuestionAnswer, Option, Rule, Recommendation
+from core.models import Question, Option, Rule, Recommendation
 from core.database import Database
 
 class InferenceEngine:
@@ -7,7 +7,7 @@ class InferenceEngine:
         self._db = db
 
     def _calculate_absolute_max_scores(self, options: List[Option], questions: Dict[int, Question]) -> Dict[int, float]:
-        max_scores = {opt.id: opt.base_score for opt in options}
+        max_scores = {opt.id: 0.0 for opt in options}
         all_rules = self._db.get_all_rules()
         option_question_max_adj = {}
         for rule in all_rules:
@@ -27,7 +27,7 @@ class InferenceEngine:
     def evaluate(self, answers: Dict[int, str]) -> List[Recommendation]:
         options = self._db.get_all_options()
         questions = {q.id: q for q in self._db.get_all_questions()}
-        scores = {opt.id: opt.base_score for opt in options}
+        scores = {opt.id: 0.0 for opt in options}
         explanations: Dict[int, List[tuple]] = {opt.id: [] for opt in options}
 
         for question_id, answer_value in answers.items():

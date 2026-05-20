@@ -93,7 +93,7 @@ class TestQuestionCRUD(unittest.TestCase):
     def test_add_question(self):
         count_before = len(self.db.get_all_questions())
         answers = [("a", "Так"), ("b", "Ні"), ("dk", "Не знаю")]
-        q_id = self.db.add_question("Тестове запитання?", "тест", answers)
+        q_id = self.db.add_question_with_rules("Тестове запитання?", "тест", answers, [])
         self.assertIsNotNone(q_id)
         count_after = len(self.db.get_all_questions())
         self.assertEqual(count_after, count_before + 1)
@@ -111,7 +111,7 @@ class TestQuestionCRUD(unittest.TestCase):
 
     def test_delete_question(self):
         answers = [("a", "Так"), ("dk", "Не знаю")]
-        q_id = self.db.add_question("Видалити мене?", "тест", answers)
+        q_id = self.db.add_question_with_rules("Видалити мене?", "тест", answers, [])
         count_before = len(self.db.get_all_questions())
         self.db.delete_question(q_id)
         count_after = len(self.db.get_all_questions())
@@ -175,7 +175,7 @@ class TestOptionCRUD(unittest.TestCase):
 
     def test_add_option(self):
         count_before = len(self.db.get_all_options())
-        opt_id = self.db.add_option("Тестовий пристрій", "Опис тестового пристрою", 0.0)
+        opt_id = self.db.add_option("Тестовий пристрій", "Опис тестового пристрою")
         self.assertIsNotNone(opt_id)
         count_after = len(self.db.get_all_options())
         self.assertEqual(count_after, count_before + 1)
@@ -184,14 +184,14 @@ class TestOptionCRUD(unittest.TestCase):
         questions = self.db.get_all_questions()
         q_id = questions[0].id
         rules = [(q_id, "a", 10.0), (q_id, "b", -5.0)]
-        opt_id = self.db.add_option_with_rules("Пристрій+правила", "Опис", 0.0, rules)
+        opt_id = self.db.add_option_with_rules("Пристрій+правила", "Опис", rules)
         
         all_rules = self.db.get_all_rules()
         opt_rules = [r for r in all_rules if r.option_id == opt_id]
         self.assertEqual(len(opt_rules), 2)
 
     def test_delete_option(self):
-        opt_id = self.db.add_option("Видалити мене", "Опис", 0.0)
+        opt_id = self.db.add_option("Видалити мене", "Опис")
         count_before = len(self.db.get_all_options())
         self.db.delete_option(opt_id)
         count_after = len(self.db.get_all_options())
@@ -201,7 +201,7 @@ class TestOptionCRUD(unittest.TestCase):
         questions = self.db.get_all_questions()
         q_id = questions[0].id
         rules = [(q_id, "a", 10.0)]
-        opt_id = self.db.add_option_with_rules("Каскад", "Опис", 0.0, rules)
+        opt_id = self.db.add_option_with_rules("Каскад", "Опис", rules)
         
         rules_before = len(self.db.get_all_rules())
         self.db.delete_option(opt_id)
@@ -212,7 +212,7 @@ class TestOptionCRUD(unittest.TestCase):
         questions = self.db.get_all_questions()
         q_id = questions[0].id
         rules = [(q_id, "a", 5.0)]
-        opt_id = self.db.add_option_with_rules("Оновити", "Опис", 0.0, rules)
+        opt_id = self.db.add_option_with_rules("Оновити", "Опис", rules)
         
         new_rules = [(q_id, "a", 15.0), (q_id, "b", -10.0)]
         self.db.update_option_rules(opt_id, new_rules)

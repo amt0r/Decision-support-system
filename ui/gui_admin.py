@@ -155,7 +155,6 @@ class AddOptionDialog(QDialog):
         return (
             self.text_input.text().strip(),
             self.desc_input.text().strip(),
-            0.0,
             _collect_rules_from_spinboxes(self.spinboxes)
         )
 
@@ -447,11 +446,11 @@ class AdminPanelPage(QWidget):
     def _add_option(self):
         dialog = AddOptionDialog(self._db, self)
         if dialog.exec():
-            text, desc, base, rules = dialog.get_data()
+            text, desc, rules = dialog.get_data()
             if not text or not desc:
                 QMessageBox.warning(self, "Помилка", "Заповніть назву та опис!")
                 return
-            self._db.add_option_with_rules(text, desc, base, rules)
+            self._db.add_option_with_rules(text, desc, rules)
             self.load_data()
             QMessageBox.information(self, "Успіх", "Нове рішення успішно додано разом із правилами нарахування балів!")
 
@@ -504,12 +503,8 @@ class AdminPanelPage(QWidget):
 
     def _import_data(self):
         import json
-        import os
         file_path, _ = QFileDialog.getOpenFileName(self, "Імпортувати дані", "", "JSON Files (*.json)")
         if file_path:
-            if not os.path.exists(file_path):
-                QMessageBox.critical(self, "Помилка", "Обраний файл не існує.")
-                return
 
             reply = QMessageBox.question(self, "Увага!", "Імпорт повністю зітре всі поточні запитання та обладнання і замінить їх даними з файлу. Продовжити?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             if reply == QMessageBox.StandardButton.Yes:

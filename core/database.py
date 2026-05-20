@@ -1,6 +1,5 @@
 import sqlite3
 import hashlib
-import json
 from typing import List, Optional, Tuple
 from core.models import Question, QuestionAnswer, Option, Rule, Admin
 from core.config import REQUIRED_IMPORT_KEYS, REQUIRED_QUESTION_KEYS, REQUIRED_ANSWER_KEYS, REQUIRED_OPTION_KEYS, REQUIRED_RULE_KEYS
@@ -15,7 +14,6 @@ class Database:
     def connect(self):
         self._connection = sqlite3.connect(self._db_path)
         self._connection.execute("PRAGMA foreign_keys = ON")
-        return self._connection
 
     def close(self):
         if self._connection:
@@ -49,8 +47,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS options (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 text TEXT NOT NULL,
-                description TEXT NOT NULL,
-                base_score REAL NOT NULL DEFAULT 0.0
+                description TEXT NOT NULL
             );
             CREATE TABLE IF NOT EXISTS rules (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,13 +78,13 @@ class Database:
         return [QuestionAnswer(id=r[0], question_id=r[1], value=r[2], label=r[3]) for r in rows]
 
     def get_all_options(self) -> List[Option]:
-        rows = self._execute("SELECT id, text, description, base_score FROM options ORDER BY id").fetchall()
-        return [Option(id=r[0], text=r[1], description=r[2], base_score=r[3]) for r in rows]
+        rows = self._execute("SELECT id, text, description FROM options ORDER BY id").fetchall()
+        return [Option(id=r[0], text=r[1], description=r[2]) for r in rows]
 
     def get_option_by_id(self, option_id: int) -> Optional[Option]:
-        r = self._execute("SELECT id, text, description, base_score FROM options WHERE id = ?", (option_id,)).fetchone()
+        r = self._execute("SELECT id, text, description FROM options WHERE id = ?", (option_id,)).fetchone()
         if r:
-            return Option(id=r[0], text=r[1], description=r[2], base_score=r[3])
+            return Option(id=r[0], text=r[1], description=r[2])
         return None
 
     def get_rules_for_answer(self, question_id: int, answer_value: str) -> List[Rule]:
@@ -108,16 +105,6 @@ class Database:
             return Admin(id=r[0], username=r[1], password_hash=r[2])
         return None
 
-    def add_question(self, text: str, category: str, answers: List[Tuple[str, str]]) -> int:
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO questions (text, category) VALUES (?, ?)", (text, category))
-        question_id = cursor.lastrowid
-        for value, label in answers:
-            cursor.execute("INSERT INTO question_answers (question_id, value, label) VALUES (?, ?, ?)", (question_id, value, label))
-        conn.commit()
-        return question_id
-
     def add_question_with_rules(self, text: str, category: str, answers: List[Tuple[str, str]], rules_data: List[Tuple[str, int, float]]) -> int:
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -129,11 +116,6 @@ class Database:
             cursor.execute("INSERT INTO rules (question_id, answer_value, option_id, score_adjustment) VALUES (?, ?, ?, ?)", (question_id, answer_value, option_id, score_adjustment))
         conn.commit()
         return question_id
-
-    def update_question(self, question_id: int, text: str, category: str):
-        conn = self.get_connection()
-        conn.execute("UPDATE questions SET text = ?, category = ? WHERE id = ?", (text, category, question_id))
-        conn.commit()
 
     def update_question_with_rules(self, question_id: int, text: str, category: str, answers: List[Tuple[str, str]], rules_data: List[Tuple[str, int, float]]):
         conn = self.get_connection()
@@ -162,27 +144,22 @@ class Database:
         conn.execute("DELETE FROM questions WHERE id = ?", (question_id,))
         conn.commit()
 
-    def add_option(self, text: str, description: str, base_score: float) -> int:
+    def add_option(self, text: str, description: str) -> int:
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO options (text, description, base_score) VALUES (?, ?, ?)", (text, description, base_score))
+        cursor.execute("INSERT INTO options (text, description) VALUES (?, ?)", (text, description))
         conn.commit()
         return cursor.lastrowid
 
-    def add_option_with_rules(self, text: str, description: str, base_score: float, rules_data: List[Tuple[int, str, float]]) -> int:
+    def add_option_with_rules(self, text: str, description: str, rules_data: List[Tuple[int, str, float]]) -> int:
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO options (text, description, base_score) VALUES (?, ?, ?)", (text, description, base_score))
+        cursor.execute("INSERT INTO options (text, description) VALUES (?, ?)", (text, description))
         option_id = cursor.lastrowid
         for question_id, answer_value, score_adjustment in rules_data:
             cursor.execute("INSERT INTO rules (question_id, answer_value, option_id, score_adjustment) VALUES (?, ?, ?, ?)", (question_id, answer_value, option_id, score_adjustment))
         conn.commit()
         return option_id
-
-    def update_option(self, option_id: int, text: str, description: str, base_score: float):
-        conn = self.get_connection()
-        conn.execute("UPDATE options SET text = ?, description = ?, base_score = ? WHERE id = ?", (text, description, base_score, option_id))
-        conn.commit()
 
     def delete_option(self, option_id: int):
         conn = self.get_connection()
@@ -252,8 +229,7 @@ class Database:
             data["options"].append({
                 "id": o.id,
                 "text": o.text,
-                "description": o.description,
-                "base_score": o.base_score
+                "description": o.description
             })
             
         rules = self.get_all_rules()
@@ -298,7 +274,7 @@ class Database:
                 cursor.execute("INSERT INTO question_answers (question_id, value, label) VALUES (?, ?, ?)", (q["id"], a["value"], a["label"]))
                 
         for o in data.get("options", []):
-            cursor.execute("INSERT INTO options (id, text, description, base_score) VALUES (?, ?, ?, ?)", (o["id"], o["text"], o["description"], o["base_score"]))
+            cursor.execute("INSERT INTO options (id, text, description) VALUES (?, ?, ?)", (o["id"], o["text"], o["description"]))
             
         for r in data.get("rules", []):
             cursor.execute("INSERT INTO rules (question_id, answer_value, option_id, score_adjustment) VALUES (?, ?, ?, ?)", 
@@ -350,21 +326,21 @@ class Database:
                 cursor.execute("INSERT INTO question_answers (question_id, value, label) VALUES (?, ?, ?)", (q_id_map[idx], val, label))
 
         options_data = [
-            ("Бензиновий генератор 3кВт", "Класичний генератор на бензині потужністю 3 кВт. Надійне живлення побутових приладів. Потребує палива та обслуговування, шумний у роботі.", 0.0),
-            ("Дизельний генератор 5кВт", "Потужний дизельний генератор на 5 кВт. Економічний у витраті палива, надійний для тривалої роботи. Важкий та шумний.", 0.0),
-            ("Інверторний генератор 2кВт", "Тихий інверторний генератор потужністю 2 кВт. Видає чисту синусоїду для чутливої електроніки. Компактний та економічний.", 0.0),
-            ("Портативна зарядна станція 1кВт", "Літій-іонна зарядна станція на 1 кВт. Безшумна, портативна, заряджається від мережі або сонячних панелей.", 0.0),
-            ("Потужна зарядна станція 3кВт", "Високопотужна зарядна станція на 3 кВт з великим акумулятором. Живить основні побутові прилади протягом кількох годин.", 0.0),
-            ("Сонячна електростанція 5кВт", "Комплект сонячних панелей з акумулятором та інвертором на 5 кВт. Екологічне рішення для автономного живлення.", 0.0),
-            ("ДБЖ (UPS) 1.5кВт", "Джерело безперебійного живлення на 1.5 кВт. Миттєве перемикання при зникненні мережі. Ідеальний для комп'ютерів та мережевого обладнання.", 0.0),
-            ("Гібридний інвертор 5кВт", "Потужний інвертор з підтримкою сонячних панелей та акумуляторів на 5 кВт. Автоматичне перемикання, програмований режим роботи.", 0.0),
-            ("Газовий генератор 6кВт", "Генератор на природному газі або пропані потужністю 6 кВт. Менше обслуговування та тихіший за бензиновий аналог.", 0.0),
-            ("Портативна сонячна станція 500Вт", "Компактна сонячна електростанція на 500 Вт з вбудованою панеллю. Ідеальна для зарядки гаджетів, освітлення та виїздів на природу.", 0.0),
+            ("Бензиновий генератор 3кВт", "Класичний генератор на бензині потужністю 3 кВт. Надійне живлення побутових приладів. Потребує палива та обслуговування, шумний у роботі."),
+            ("Дизельний генератор 5кВт", "Потужний дизельний генератор на 5 кВт. Економічний у витраті палива, надійний для тривалої роботи. Важкий та шумний."),
+            ("Інверторний генератор 2кВт", "Тихий інверторний генератор потужністю 2 кВт. Видає чисту синусоїду для чутливої електроніки. Компактний та економічний."),
+            ("Портативна зарядна станція 1кВт", "Літій-іонна зарядна станція на 1 кВт. Безшумна, портативна, заряджається від мережі або сонячних панелей."),
+            ("Потужна зарядна станція 3кВт", "Високопотужна зарядна станція на 3 кВт з великим акумулятором. Живить основні побутові прилади протягом кількох годин."),
+            ("Сонячна електростанція 5кВт", "Комплект сонячних панелей з акумулятором та інвертором на 5 кВт. Екологічне рішення для автономного живлення."),
+            ("ДБЖ (UPS) 1.5кВт", "Джерело безперебійного живлення на 1.5 кВт. Миттєве перемикання при зникненні мережі. Ідеальний для комп'ютерів та мережевого обладнання."),
+            ("Гібридний інвертор 5кВт", "Потужний інвертор з підтримкою сонячних панелей та акумуляторів на 5 кВт. Автоматичне перемикання, програмований режим роботи."),
+            ("Газовий генератор 6кВт", "Генератор на природному газі або пропані потужністю 6 кВт. Менше обслуговування та тихіший за бензиновий аналог."),
+            ("Портативна сонячна станція 500Вт", "Компактна сонячна електростанція на 500 Вт з вбудованою панеллю. Ідеальна для зарядки гаджетів, освітлення та виїздів на природу."),
         ]
 
         o_id_map = {}
-        for idx, (text, desc, base) in enumerate(options_data, start=1):
-            cursor.execute("INSERT INTO options (text, description, base_score) VALUES (?, ?, ?)", (text, desc, base))
+        for idx, (text, desc) in enumerate(options_data, start=1):
+            cursor.execute("INSERT INTO options (text, description) VALUES (?, ?)", (text, desc))
             o_id_map[idx] = cursor.lastrowid
 
         rules_data = [

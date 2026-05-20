@@ -19,7 +19,6 @@ class Option:
     id: int
     text: str
     description: str
-    base_score: float
 
 @dataclass
 class Rule:
